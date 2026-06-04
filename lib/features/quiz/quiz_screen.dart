@@ -208,6 +208,14 @@ class _QuizScreenState extends State<QuizScreen> {
                   onExit: () {
                     Navigator.of(context).pop();
                   },
+                  onResumeQuiz: () {
+                    setState(() {
+                      isQuizFinished = false;
+                    });
+                  },
+                  onGoToQuestion: (int sectionIdx, int questionIdx) {
+                    _jumpToQuestion(sectionIdx, questionIdx, isWideScreen);
+                  },
                 ) 
               : QuizContent(
                   currentSection: surveySections[currentSectionIndex],

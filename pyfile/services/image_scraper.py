@@ -15,7 +15,7 @@ class ImageScraper:
     ):
 
 
-        self.driver=driver
+        self.driver = driver
 
 
     ##################################
@@ -79,6 +79,10 @@ class ImageScraper:
         result=[]
 
 
+        ##################################
+        # img url
+        ##################################
+
         for img in imgs:
 
 
@@ -113,9 +117,13 @@ class ImageScraper:
                 )
 
 
+        ##################################
+        # 중복 제거
+        ##################################
+
         result=list(
 
-            set(
+            dict.fromkeys(
 
                 result
 
@@ -126,11 +134,74 @@ class ImageScraper:
 
         print(
 
-            "이미지:",
+            "전체 이미지:",
 
             len(result)
 
         )
 
 
-        return result
+        ##################################
+        # 앞 2개
+        ##################################
+
+        first=(
+
+            result[:2]
+
+        )
+
+
+        ##################################
+        # 뒤 3개
+        ##################################
+
+        last=(
+
+            result[-3:]
+
+        )
+
+
+        ##################################
+        # 합치기 + 중복 제거
+        ##################################
+
+        selected=(
+
+            list(
+
+                dict.fromkeys(
+
+                    first + last
+
+                )
+
+            )
+
+        )
+
+
+        print(
+
+            "사용 이미지:",
+
+            len(selected)
+
+        )
+
+
+        print(
+
+            "선택:",
+
+            range(
+
+                len(selected)
+
+            )
+
+        )
+
+
+        return selected

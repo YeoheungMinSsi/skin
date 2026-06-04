@@ -1,7 +1,28 @@
 import 'package:flutter/material.dart';
+import 'package:window_manager/window_manager.dart';
+import 'dart:io' show Platform;
 import 'features/home/home_screen.dart';
 
-void main() {
+void main() async {
+  // Flutter 바인딩 초기화
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // 데스크톱 환경(Windows, Linux, macOS)인 경우 창 최소 크기 설정
+  if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
+    await windowManager.ensureInitialized();
+    
+    WindowOptions windowOptions = const WindowOptions(
+      minimumSize: Size(360, 600), // 가로 360, 세로 600 (더 이상 줄어들지 않는 모바일 사이즈)
+      center: true,
+      title: 'Skin Care App',
+    );
+    
+    windowManager.waitUntilReadyToShow(windowOptions, () async {
+      await windowManager.show();
+      await windowManager.focus();
+    });
+  }
+
   runApp(const MyApp());
 }
 

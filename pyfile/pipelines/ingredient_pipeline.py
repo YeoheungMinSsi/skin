@@ -1,15 +1,20 @@
-import pandas as pd
 import glob
+import pandas as pd
 
 from services.detail_scraper import DetailScraper
-from services.image_scraper import ImageScraper
-from services.image_downloader import ImageDownloader
 from services.ingredient_parser import IngredientParser
 from services.ingredient_saver import IngredientSaver
+
+from services.image_scraper import ImageScraper
+from services.image_downloader import ImageDownloader
 
 
 class IngredientPipeline:
 
+
+    ##################################
+    # 전체 수집
+    ##################################
 
     def run(
 
@@ -22,7 +27,30 @@ class IngredientPipeline:
     ):
 
 
-        scraper=DetailScraper()
+        scraper=(
+
+            DetailScraper()
+
+        )
+
+
+        parser=(
+
+            IngredientParser()
+
+        )
+
+
+        saver=(
+
+            IngredientSaver(
+
+                "result/ingredients.csv"
+
+            )
+
+        )
+
 
         image_scraper=(
 
@@ -34,25 +62,10 @@ class IngredientPipeline:
 
         )
 
+
         downloader=(
 
             ImageDownloader()
-
-        )
-
-        parser=(
-
-            IngredientParser()
-
-        )
-
-        saver=(
-
-            IngredientSaver(
-
-                "result/ingredients.csv"
-
-            )
 
         )
 
@@ -74,6 +87,15 @@ class IngredientPipeline:
         for file in files:
 
 
+            print(
+
+                "\n파일:",
+
+                file
+
+            )
+
+
             df=(
 
                 pd.read_csv(
@@ -87,24 +109,38 @@ class IngredientPipeline:
             )
 
 
-            df=df[
+            ##################################
+            # goods 있는 것만
+            ##################################
 
-                df["has_goods"]
+            df=(
 
-                ==
+                df[
 
-                True
+                    df["has_goods"]
 
-            ]
+                    ==
+
+                    True
+
+                ]
+
+            )
 
 
-            df=df.iloc[
+            df=(
 
-                start:
+                df.iloc[
 
-            ]
+                    start:
 
-            for _, row in df.iterrows():
+                ]
+
+            )
+
+
+            for _,row in df.iterrows():
+
 
                 ##################################
                 # limit
@@ -116,14 +152,17 @@ class IngredientPipeline:
 
                         and
 
-                        count >= limit
+                        count>=limit
 
                 ):
+
+
                     print(
 
                         "\nlimit 도달"
 
                     )
+
 
                     scraper.close()
 
@@ -131,11 +170,13 @@ class IngredientPipeline:
 
                     return
 
-                goods_id = (
+
+                goods_id=(
 
                     int(row["goods_id"])
 
                 )
+
 
                 print(
 
@@ -143,11 +184,13 @@ class IngredientPipeline:
 
                 )
 
+
                 print(
 
-                    f"[{count + 1}/{limit}]"
+                    f"[{count+1}/{limit}]"
 
                 )
+
 
                 print(
 
@@ -157,6 +200,7 @@ class IngredientPipeline:
 
                 )
 
+
                 print(
 
                     "제품:",
@@ -164,6 +208,7 @@ class IngredientPipeline:
                     row["제품명"]
 
                 )
+
 
                 print(
 
@@ -173,6 +218,7 @@ class IngredientPipeline:
 
                 )
 
+
                 print(
 
                     "goods_id:",
@@ -181,11 +227,12 @@ class IngredientPipeline:
 
                 )
 
+
                 ##################################
                 # 제공고시
                 ##################################
 
-                html = (
+                html=(
 
                     scraper.get_provision(
 
@@ -195,71 +242,55 @@ class IngredientPipeline:
 
                 )
 
-                if html is None:
-                    print(
 
-                        "제공고시 실패"
+                ##################################
+                # blocked
+                ##################################
+
+                if html is None:
+
+
+                    data={
+
+
+                        "브랜드":
+                            row["브랜드"],
+
+
+                        "제품명":
+                            row["제품명"],
+
+
+                        "goods_id":
+                            goods_id,
+
+
+                        "search_id":
+                            row["search_id"],
+
+
+                        "ingredient_state":
+                            "blocked"
+
+                    }
+
+
+                    saver.add(
+
+                        data
 
                     )
 
+
+                    count += 1
+
+
                     continue
+
 
                 ##################################
                 # 파싱
                 ##################################
-
-                data = (
-
-                    parser.parse(
-
-                        html
-
-                    )
-
-                )
-
-                ingredient = (
-
-                    data.get(
-
-                        "주요성분",
-
-                        ""
-
-                    )
-
-                )
-
-                print(
-
-                    "\n주요성분:",
-
-                    ingredient[:100]
-
-                )
-
-                ##################################
-                # 이미지 필요
-                ##################################
-
-                need_image = (
-
-                        ingredient == ""
-
-                        or
-
-                        ingredient == "상품상세참조"
-
-                )
-
-                print(
-
-                    "이미지 필요:",
-
-                    need_image
-
-                )
-
 
                 data=(
 
@@ -274,40 +305,80 @@ class IngredientPipeline:
 
                 ingredient=(
 
-                    data.get(
+                    str(
 
-                        "주요성분",
+                        data.get(
 
-                        ""
+                            "주요성분",
+
+                            ""
+
+                        )
 
                     )
+
+                    .strip()
+
+                )
+
+
+                print(
+
+                    "\n주요성분:",
+
+                    ingredient[:100]
 
                 )
 
 
                 ##################################
-                # 이미지 필요
+                # 이미지 필요 판단
                 ##################################
+
+                keywords=[
+
+                    "상세",
+
+                    "참조",
+
+                    "참고",
+
+                    "페이지"
+
+                ]
+
 
                 need_image=(
 
-                    ingredient==""
+                        ingredient==""
 
-                    or
+                        or
 
-                    ingredient=="상품상세참조"
+                        any(
+
+                            k in ingredient
+
+                            for k in keywords
+
+                        )
 
                 )
 
 
+                print(
+
+                    "이미지 필요:",
+
+                    need_image
+
+                )
+
+
+                ##################################
+                # 이미지 저장
+                ##################################
+
                 if need_image:
-
-
-                    print(
-
-                        "\n이미지 필요"
-
-                    )
 
 
                     imgs=(
@@ -348,6 +419,16 @@ class IngredientPipeline:
 
                         if path:
 
+
+                            print(
+
+                                "저장:",
+
+                                path
+
+                            )
+
+
                             paths.append(
 
                                 path
@@ -356,48 +437,88 @@ class IngredientPipeline:
 
 
                     data["이미지"]=(
-                        ";".join(paths)
+
+                        ";".join(
+
+                            paths
+
+                        )
+
                     )
 
 
                 ##################################
-                # 상태 저장
+                # 상태
                 ##################################
 
                 if ingredient=="":
 
+
                     state="missing"
 
-                elif ingredient=="상품상세참조":
+
+                elif any(
+
+                        k in ingredient
+
+                        for k in keywords
+
+                ):
+
 
                     state="detail"
 
+
                 else:
+
 
                     state="normal"
 
 
-                data["ingredient_state"]=state
+                data[
 
+                    "ingredient_state"
+
+                ]=state
+
+
+                ##################################
+                # 공통값
+                ##################################
 
                 data["브랜드"]=(
+
                     row["브랜드"]
+
                 )
+
 
                 data["제품명"]=(
+
                     row["제품명"]
+
                 )
+
 
                 data["search_id"]=(
+
                     int(
+
                         row["search_id"]
+
                     )
+
                 )
 
+
                 data["goods_id"]=(
+
                     int(
+
                         goods_id
+
                     )
+
                 )
 
 
@@ -414,3 +535,223 @@ class IngredientPipeline:
         scraper.close()
 
         saver.save()
+
+
+    ##################################
+    # 실패 재시도
+    ##################################
+
+    def run_retry(
+
+            self,
+
+            limit=None
+
+    ):
+
+
+        df=(
+
+            pd.read_csv(
+
+                "result/ingredients.csv",
+
+                encoding="utf-8-sig"
+
+            )
+
+        )
+
+
+        retry_idx=(
+
+            df[
+
+                (
+
+                    df["ingredient_state"]
+
+                    ==
+
+                    "blocked"
+
+                )
+
+                |
+
+                (
+
+                    df["ingredient_state"]
+
+                    ==
+
+                    "missing"
+
+                )
+
+            ]
+
+            .index
+
+        )
+
+
+        print(
+
+            "\n재시도:",
+
+            len(
+
+                retry_idx
+
+            )
+
+        )
+
+
+        scraper=(
+
+            DetailScraper()
+
+        )
+
+
+        parser=(
+
+            IngredientParser()
+
+        )
+
+
+        count=0
+
+
+        for idx in retry_idx:
+
+
+            if (
+
+                    limit
+
+                    and
+
+                    count>=limit
+
+            ):
+
+
+                break
+
+
+            goods_id=(
+
+                df.loc[
+
+                    idx,
+
+                    "goods_id"
+
+                ]
+
+            )
+
+
+            print(
+
+                "\n재시도:",
+
+                df.loc[
+
+                    idx,
+
+                    "제품명"
+
+                ]
+
+            )
+
+
+            html=(
+
+                scraper.get_provision(
+
+                    goods_id
+
+                )
+
+            )
+
+
+            if html is None:
+
+                continue
+
+
+            data=(
+
+                parser.parse(
+
+                    html
+
+                )
+
+            )
+
+
+            ingredient=(
+
+                data.get(
+
+                    "주요성분",
+
+                    ""
+
+                )
+
+            )
+
+
+            if ingredient:
+
+
+                df.loc[
+                    idx,
+                    "주요성분"
+                ]=ingredient
+
+
+                df.loc[
+                    idx,
+                    "ingredient_state"
+                ]="normal"
+
+
+                print(
+
+                    "업데이트 성공"
+
+                )
+
+
+            count += 1
+
+
+        scraper.close()
+
+
+        df.to_csv(
+
+            "result/ingredients.csv",
+
+            index=False,
+
+            encoding="utf-8-sig"
+
+        )
+
+
+        print(
+
+            "\n저장 완료"
+
+        )
